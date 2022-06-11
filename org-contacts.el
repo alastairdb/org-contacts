@@ -1,4 +1,4 @@
-;;; org-contacts.el --- Contacts management system for Org Mode. -*- lexical-binding: t; -*-
+;;; org-contacts.el --- Contacts management system for Org Mode -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2010-2014, 2021 Julien Danjou <julien@danjou.info>
 
@@ -6,7 +6,8 @@
 ;; Maintainer: stardiviner <numbchild@gmail.com>
 ;; Keywords: contacts, org-mode, outlines, hypermedia, calendar
 ;; Version: 1.0
-;; Package-Requires: ((emacs "28.1") (cl-lib "1.0") (org "9.3.4") (gnus "v5.13"))
+;; Package-Requires: ((emacs "27.1") (cl-lib "0.7") (org "9.3.4") (gnus "5.13"))
+;; Homepage: https://repo.or.cz/org-contacts.git
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -630,13 +631,12 @@ description."
                  (run-hook-with-args-until-success
                   'org-contacts-complete-functions string))))))))
 
-;;;###autoload
 (defun org-contacts-org-complete--annotation-function (candidate)
   "Return org-contacts tags of contact candidate."
   ;; TODO
-  "Tags: ")
+  "Tags: "
+  (ignore candidate))
 
-;;;###autoload
 (defun org-contacts-org-complete--doc-function (candidate)
   "Return org-contacts content of contact candidate."
   (let* ((candidate (substring-no-properties candidate 1 nil))
@@ -661,6 +661,7 @@ description."
                          (let ((content (buffer-substring (point-min) (point-max))))
                            (when (buffer-narrowed-p) (widen))
                            content))))))
+    (ignore name)
     (with-current-buffer doc-buffer
       (read-only-mode 1)
       (let ((inhibit-read-only t))
@@ -674,7 +675,6 @@ description."
 ;;; display company-mode doc buffer bellow current window.
 (add-to-list 'display-buffer-alist '("^ \\*org-contact\\*" . (display-buffer-below-selected)))
 
-;;;###autoload
 (defun org-contacts-org-complete--location-function (candidate)
   "Return org-contacts location of contact candidate."
   (let* ((candidate (substring-no-properties candidate 1 nil))
@@ -684,6 +684,7 @@ description."
          (name (plist-get contact :name))
          (file (plist-get contact :file))
          (position (plist-get contact :position)))
+    (ignore name)
     (with-current-buffer (find-file-noselect file)
       (goto-char position)
       (cons (current-buffer) position))))
@@ -742,7 +743,10 @@ Usage: (add-hook 'completion-at-point-functions 'org-contacts-org-complete-funct
     (when marker
       (switch-to-buffer-other-window (marker-buffer marker))
       (goto-char marker)
-      (when (eq major-mode 'org-mode) (org-show-context 'agenda)))))
+      (when (eq major-mode 'org-mode)
+        (if (fboundp 'org-fold-show-context)
+            (org-fold-show-context 'agenda)
+          (org-show-context 'agenda))))))
 
 (with-no-warnings (defvar date)) ;; unprefixed, from calendar.el
 (defun org-contacts-anniversaries (&optional field format)
@@ -755,8 +759,7 @@ Format is a string matching the following format specification:
   %l - Link to the heading
   %y - Number of year
   %Y - Number of year (ordinal)"
-  (let ((calendar-date-style 'american)
-        ) ;; (entry "")
+  (let ((calendar-date-style 'american))
     (unless format (setq format org-contacts-birthday-format))
     (cl-loop for contact in (org-contacts-filter)
              for anniv = (let ((anniv (cdr (assoc-string
@@ -778,7 +781,7 @@ Format is a string matching the following format specification:
                                                            (calendar-extract-year anniv))))
                                              (format "%d%s" years (diary-ordinal-suffix years)))))))))
 
-(defun org-completing-read-date ( prompt _collection
+(defun org-contacts--completing-read-date ( prompt _collection
                                   &optional _predicate _require-match _initial-input
                                   _hist def _inherit-input-method)
   "Like `completing-read' but reads a date.
@@ -786,7 +789,7 @@ Only PROMPT and DEF are really used."
   (org-read-date nil nil nil prompt nil def))
 
 (add-to-list 'org-property-set-functions-alist
-             `(,org-contacts-birthday-property . org-completing-read-date))
+             `(,org-contacts-birthday-property . org-contacts--completing-read-date))
 
 (defun org-contacts-template-name (&optional return-value)
   "Try to return the contact name for a template.
@@ -1045,12 +1048,12 @@ address."
                                                      hist def inherit-input-method)
   "Like `completing-read' but reads a nickname."
   (if (featurep 'erc)
-      (org-completing-read prompt (append collection (erc-nicknames-list)) predicate require-match
+      (org-completing-read prompt (append collection (org-contacts-erc-nicknames-list)) predicate require-match
                            initial-input hist def inherit-input-method)
     (org-completing-read prompt collection predicate require-match
                          initial-input hist def inherit-input-method)))
 
-(defun erc-nicknames-list ()
+(defun org-contacts-erc-nicknames-list ()
   "Return all nicknames of all ERC buffers."
   (cl-loop for buffer in (erc-buffer-list)
            nconc (with-current-buffer buffer
@@ -1212,7 +1215,8 @@ link string and return the pure link target."
 ;; so everything is in order for its use in Org files
 (if (fboundp 'org-link-set-parameters)
     (org-link-set-parameters "tel")
-  (org-add-link-type "tel"))
+  (if (fboundp 'org-add-link-type)
+      (org-add-link-type "tel")))
 
 (defun org-contacts-split-property (string &optional separators omit-nulls)
   "Custom version of `split-string'.
@@ -1250,6 +1254,7 @@ are effectively trimmed).  If nil, all zero-length substrings are retained."
         (setq proplist (cons bufferstring proplist))))
     (cdr (reverse proplist))))
 
+<<<<<<< HEAD
 ;; ;;;###autoload
 ;; ;;; Add an Org link type `org-contact:' for easy jump to or searching org-contacts headline.
 ;; ;;; link spec: [[org-contact:query][desc]]
@@ -1260,6 +1265,19 @@ are effectively trimmed).  If nil, all zero-length substrings are retained."
 ;;                              :store #'org-contacts-link-store
 ;;                              :face 'org-contacts-link-face)
 ;;   (org-add-link-type "org-contact" 'org-contacts-link-open))
+=======
+;;;###autoload
+;;; Add an Org link type `org-contact:' for easy jump to or searching org-contacts headline.
+;;; link spec: [[org-contact:query][desc]]
+(if (fboundp 'org-link-set-parameters)
+    (org-link-set-parameters "org-contact"
+                             :follow #'org-contacts-link-open
+                             :complete #'org-contacts-link-complete
+                             :store #'org-contacts-link-store
+                             :face 'org-contacts-link-face)
+  (if (fboundp 'org-add-link-type)
+      (org-add-link-type "org-contact" 'org-contacts-link-open)))
+>>>>>>> origin/main
 
 ;;;###autoload
 (defun org-contacts-link-store ()
@@ -1278,7 +1296,6 @@ are effectively trimmed).  If nil, all zero-length substrings are retained."
           (org-link-add-props :link link :description headline-str)
           link)))))
 
-;;;###autoload
 (defun org-contacts--all-contacts ()
   "Return a list of all contacts in `org-contacts-files'.
 Each element has the form (NAME . (FILE . POSITION))."
@@ -1353,7 +1370,8 @@ Each element has the form (NAME . (FILE . POSITION))."
 ;;; org-mode link "mailto:" email completion.
 (if (fboundp 'org-link-set-parameters)
     (org-link-set-parameters "mailto" :complete #'org-contacts-mailto-link-completion)
-  (org-add-link-type "mailto"))
+  (if (fboundp 'org-add-link-type)
+      (org-add-link-type "mailto")))
 
 (defun org-contacts-mailto-link--get-all-emails ()
   "Retrieve all org-contacts EMAIL property values."
@@ -1367,6 +1385,7 @@ Each element has the form (NAME . (FILE . POSITION))."
                        (goto-char position)
                        ;; (symbol-name (org-property-or-variable-value 'EMAIL))
                        (org-entry-get (point) "EMAIL")))))
+       (ignore name)
        ;; (cons name email)
        email))
    (org-contacts--all-contacts)))

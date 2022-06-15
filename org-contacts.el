@@ -1254,7 +1254,6 @@ are effectively trimmed).  If nil, all zero-length substrings are retained."
         (setq proplist (cons bufferstring proplist))))
     (cdr (reverse proplist))))
 
-<<<<<<< HEAD
 ;; ;;;###autoload
 ;; ;;; Add an Org link type `org-contact:' for easy jump to or searching org-contacts headline.
 ;; ;;; link spec: [[org-contact:query][desc]]
@@ -1265,19 +1264,6 @@ are effectively trimmed).  If nil, all zero-length substrings are retained."
 ;;                              :store #'org-contacts-link-store
 ;;                              :face 'org-contacts-link-face)
 ;;   (org-add-link-type "org-contact" 'org-contacts-link-open))
-=======
-;;;###autoload
-;;; Add an Org link type `org-contact:' for easy jump to or searching org-contacts headline.
-;;; link spec: [[org-contact:query][desc]]
-(if (fboundp 'org-link-set-parameters)
-    (org-link-set-parameters "org-contact"
-                             :follow #'org-contacts-link-open
-                             :complete #'org-contacts-link-complete
-                             :store #'org-contacts-link-store
-                             :face 'org-contacts-link-face)
-  (if (fboundp 'org-add-link-type)
-      (org-add-link-type "org-contact" 'org-contacts-link-open)))
->>>>>>> origin/main
 
 ;;;###autoload
 (defun org-contacts-link-store ()
